@@ -4,7 +4,9 @@
   "description": "page loader",
   "main": "src/index.js",
   "scripts": {
-    "test": "npx jest"
+    "test": "npx jest",
+    "test:debug": "DEBUG=nock.* npx jest",
+    "page-loader": "./bin/page-loader.js"
   },
   "repository": {
     "type": "git",
@@ -18,7 +20,7 @@
   },
   "homepage": "https://github.com/rinAkhm/frontend-testing-react-project-67#readme",
   "bin": {
-    "page-loader": "bin/page-loader.js"
+    "bin": "bin/page-loader.js"
   },
   "simple-git-hooks": {
     "pre-commit": "npx eslint ."
@@ -40,6 +42,7 @@
   "dependencies": {
     "axios": "^0.27.2",
     "commander": "^9.4.0",
+    "debug": "^4.3.4",
     "nock": "^13.2.9"
   }
 }
