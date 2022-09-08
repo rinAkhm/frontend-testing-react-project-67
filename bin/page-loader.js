@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint linebreak-style: ["error", "unix"] */
+/* linebreak-style: ["error", "windows"] */
 
 import { program } from 'commander';
 import process from 'process';

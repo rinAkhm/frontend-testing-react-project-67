@@ -1,4 +1,4 @@
-/* eslint linebreak-style: ["error", "unix"] */
+/* linebreak-style: ["error", "windows"] */
 import debug from 'debug';
 import path from 'path';
 

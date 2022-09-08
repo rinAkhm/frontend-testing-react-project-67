@@ -1,4 +1,4 @@
-/* eslint linebreak-style: ["error", "unix"] */
+/* linebreak-style: ["error", "windows"] */
 import nock from 'nock';
 import os from 'os';
 import path from 'path';
@@ -9,7 +9,7 @@ import pageLoader from '../src/index.js';
 let data = '';
 let dirPath = '';
 const actualHtml = 'ru-hexlet-io-courses.html';
-const expectFile = 'courses.html';
+const expectFile = 'after.html';
 const fakeFile = 'fake_file.html';
 
 const getFixturePath = (name) => path.join(__dirname, '..', '__fixtures__', name);
@@ -18,7 +18,7 @@ const getContentFile = async (pathFile, name) => fs.readFile(path.join(pathFile,
 beforeAll(async () => {
   dirPath = await fs.mkdtemp(os.tmpdir());
   await fs.copyFile(
-    path.join(getFixturePath(expectFile)),
+    path.join(getFixturePath('courses.html')),
     path.join(dirPath, 'after.html'),
   );
   await fs.copyFile(
@@ -47,5 +47,6 @@ test('page loader', async () => {
     data.actualFiles,
   );
   const actual = await getContentFile(actualFolder, actualHtml);
-  expect(actual.trim()).toEqual(resHtml.trim());
+  const expected = await getContentFile(dirPath, expectFile);
+  expect(actual).toEqual(expected);
 });

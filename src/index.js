@@ -1,4 +1,4 @@
-/* eslint linebreak-style: ["error", "unix"] */
+/* linebreak-style: ["error", "windows"] */
 import path from 'path';
 import { promises as fs } from 'fs';
 import { URL } from 'url';
@@ -29,7 +29,7 @@ const attributeMapping = [
 
 const prepareData = (website, baseDirname, html) => {
   const data = [];
-  const $ = cheerio.load(html, { decodeEntities: false });
+  const $ = cheerio.load(html);
   // пербор элеметов из запроса с фильтарицей
   attributeMapping.forEach((item) => {
     const listElements = $(item.tag).toArray();
@@ -67,7 +67,7 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
 
   await getData(url.toString())
     .then((response) => {
-      data = prepareData(url.origin, folder, response.data);
+      data = prepareData(url.hostname, folder, response.data);
       fs.writeFile(path.join(fullDirname, mainFile), data.html);
     });
 };
