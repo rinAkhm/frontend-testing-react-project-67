@@ -27,6 +27,14 @@ const attributeMapping = [
   },
 ];
 
+const downloadData = async (pageFolder, parseObject) => {
+  axios.get(parseObject.url, { responseType: 'arraybuffer' })
+    .then((res) => {
+      fs.writeFile(path.join(pageFolder, parseObject.pathName), res.data);
+    })
+    .catch((err) => log(`Unsuccessful download with urk ${parseObject.url}\n${err}`));
+};
+
 const prepareData = (website, baseDirname, html) => {
   const data = [];
   const $ = cheerio.load(html);
@@ -58,6 +66,7 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
   const dirname = path.resolve(process.cwd(), pathFolder);
   const fullDirname = path.join(dirname, folder);
   let data;
+
   await fs.access(fullDirname)
     .then(() => log('foleds were created'))
     .catch(() => {
@@ -70,5 +79,7 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
       data = prepareData(url.hostname, folder, response.data);
       fs.writeFile(path.join(fullDirname, mainFile), data.html);
     });
+
+  data.data.map((filesList) => downloadData(fullDirname, filesList));
 };
 export default pageLoader;
