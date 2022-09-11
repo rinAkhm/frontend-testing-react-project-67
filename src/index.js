@@ -28,7 +28,7 @@ const attributeMapping = [
 ];
 
 const downloadData = async (pageFolder, parseObject) => {
-  axios.get(parseObject.url, { responseType: 'arraybuffer' })
+  axios.get(parseObject.url.toString(), { responseType: 'arraybuffer' })
     .then((res) => {
       fs.writeFile(path.join(pageFolder, parseObject.pathName), res.data);
     })
@@ -46,13 +46,13 @@ const prepareData = (website, baseDirname, html) => {
       .filter((element) => element.attr(item.attr))
       .map((args) => ({
         args,
-        url: args.attr(item.attr),
-        pathName: urlToFilename(path.join(website, args.attr(item.attr))),
+        url: new URL(args.attr(item.attr), website),
       }));
     // Заменяем html
-    items.forEach(({ args, pathName, url }) => {
-      const tmp = path.join(baseDirname, pathName);
-      args.attr(item.attr, tmp);
+    items.forEach(({ args, url }) => {
+      const slug = urlToFilename(`${url.hostname}${url.pathname}`);
+      const pathName = path.join(baseDirname, slug);
+      args.attr(item.attr, pathName);
       data.push({ url, pathName });
     });
   });
@@ -76,10 +76,10 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
 
   await getData(url.toString())
     .then((response) => {
-      data = prepareData(url.hostname, folder, response.data);
+      data = prepareData(url, folder, response.data);
       fs.writeFile(path.join(fullDirname, mainFile), data.html);
     });
 
-  data.data.map((filesList) => downloadData(fullDirname, filesList));
+  data.data.map((filesList) => downloadData(dirname, filesList));
 };
 export default pageLoader;
