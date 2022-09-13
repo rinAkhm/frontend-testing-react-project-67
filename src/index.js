@@ -5,6 +5,7 @@ import { URL } from 'url';
 import debug from 'debug';
 import cheerio from 'cheerio';
 import axios from 'axios';
+// import _ from 'lodash';
 import { prepareName, urlToFilename } from './helper.js';
 
 const log = debug('page-loader');
@@ -27,17 +28,19 @@ const attributeMapping = [
   },
 ];
 
-const downloadData = async (pageFolder, parseObject) => {
-  axios.get(parseObject.url.toString(), { responseType: 'arraybuffer' })
-    .then((res) => {
-      fs.writeFile(path.join(pageFolder, parseObject.pathName), res.data);
-    })
-    .catch((err) => log(`Unsuccessful download with urk ${parseObject.url}\n${err}`));
+const downloadData = (dirname, files, { url, slug }) => {
+  const myUrl = `${url.origin}${url.pathname}`;
+  const fullPath = path.join(dirname, files, slug);
+  axios.get(myUrl, { responseType: 'arraybuffer' })
+    .then((response) => fs.writeFile(fullPath, response.data))
+    .catch((err) => {
+      throw new Error(`Failed to save ${fullPath}. error: ${err.message}`);
+    });
 };
 
-const prepareData = (website, baseDirname, html) => {
+const prepareData = (website, folder, html) => {
   const data = [];
-  const $ = cheerio.load(html);
+  const $ = cheerio.load(html, { decodeEntities: false });
   // пербор элеметов из запроса с фильтарицей
   attributeMapping.forEach((item) => {
     const listElements = $(item.tag).toArray();
@@ -50,10 +53,9 @@ const prepareData = (website, baseDirname, html) => {
       }));
     // Заменяем html
     items.forEach(({ args, url }) => {
-      const slug = urlToFilename(`${url.hostname}${url.pathname}`);
-      const pathName = path.join(baseDirname, slug);
-      args.attr(item.attr, pathName);
-      data.push({ url, pathName });
+      const slug = urlToFilename(`${url.hostname}${url.pathname}`); // "ru-hexlet-io-courses_files\\ru-hexlet-io-assets-professions-nodejs.png"
+      args.attr(item.attr, path.join(folder, slug));
+      data.push({ url, slug });
     });
   });
   return { html: $.html(), data };
@@ -63,7 +65,7 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
   const url = new URL(pathUrl);
   const folder = prepareName(`${url.hostname}${url.pathname}`, 'files');
   const mainFile = urlToFilename(`${url.hostname}${url.pathname}`);
-  const dirname = path.resolve(process.cwd(), pathFolder);
+  const dirname = path.resolve(process.cwd(), pathFolder); // tmp
   const fullDirname = path.join(dirname, folder);
   let data;
 
@@ -77,9 +79,11 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
   await getData(url.toString())
     .then((response) => {
       data = prepareData(url, folder, response.data);
-      fs.writeFile(path.join(fullDirname, mainFile), data.html);
+      fs.writeFile(path.join(dirname, folder, mainFile), data.html);
+    })
+    .then(() => {
+      const tasks = data.data.map((filesList) => downloadData(dirname, folder, filesList));
+      return Promise.all(tasks);
     });
-
-  data.data.map((filesList) => downloadData(dirname, filesList));
 };
 export default pageLoader;

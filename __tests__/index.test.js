@@ -8,20 +8,18 @@ import pageLoader from '../src/index.js';
 
 let data = '';
 let dirPath = '';
-const mainFolder = './page_loader';
-const actualHtml = 'ru-hexlet-io-courses.html';
+// const mainFolder = './page_loader';
+// const actualHtml = 'ru-hexlet-io-courses.html';
 const actualFiles = 'ru-hexlet-io-courses_files';
-const expectFile = 'after.html';
+// const expectFile = 'courses.html';
 const fakeFile = 'fake_file.html';
-const rootPath = path.join(__dirname, '..', mainFolder.split('/')[1]);
 
 const getFixturePath = (name) => path.join(__dirname, '..', '__fixtures__', name);
-const getFixtureContent = async (name) => {
-  const res = fs.readFile(getFixturePath(name), 'utf-8');
-  return res;
+const getFixtureContent = (name) => fs.readFile(getFixturePath(name), 'utf-8');
+const readCurrentFile = async (pathName, name) => {
+  const file = fs.readFile(path.join(pathName, name), 'utf-8');
+  return file;
 };
-// const getTmpContent = (name) => fs.readFile(path.join(dirPath, name), 'utf-8');
-const readCurrentFile = async (pathName, name) => fs.readFile(path.join(pathName, name));
 
 const responseData = [
   {
@@ -34,10 +32,7 @@ const responseData = [
 
 beforeAll(async () => {
   dirPath = await fs.mkdtemp(os.tmpdir());
-  await fs.copyFile(
-    path.join(getFixturePath('courses.html')),
-    path.join(dirPath, 'after.html'),
-  );
+  console.log(dirPath);
 });
 
 beforeEach(async () => {
@@ -47,28 +42,31 @@ beforeEach(async () => {
   };
 });
 
-test('page loader', async () => {
-  const resHtml = await getFixtureContent(fakeFile);
-  nock(data.baseUrl).persist().get(data.uri).reply(200, resHtml);
-  await pageLoader(`${data.baseUrl}${data.uri}`, dirPath);
-  const loaderPath = path.join(dirPath, actualFiles);
-  const actual = await readCurrentFile(loaderPath, actualHtml);
-  const expected = await readCurrentFile(dirPath, expectFile);
-  expect(actual).toEqual(expected);
-});
+// test('page loader', async () => {
+//   const resHtml = await getFixtureContent(fakeFile);
+//   nock(data.baseUrl).persist().get(data.uri).reply(200, resHtml);
+//   await pageLoader(`${data.baseUrl}${data.uri}`, dirPath);
+//   const loaderPath = path.join(dirPath, actualFiles);
+//   const expected = await getFixtureContent(expectFile);
+//   const actual = await readCurrentFile(loaderPath, actualHtml);
+//   expect(actual).toEqual(expected);
+// });
 
-test.each(responseData)('dependens files downloads', async ({ nameFile, format }) => {
+test.each(responseData)('img test', async ({ nameFile, expectedFileName }) => {
   const index = responseData.findIndex((item) => item.nameFile === nameFile);
   const resHtml = await getFixtureContent(fakeFile);
   const expected = await getFixtureContent(nameFile);
+  const tmpFolder = dirPath;
+  console.log(tmpFolder);
   nock(data.baseUrl).persist()
-    .get(data.uri).reply(200, resHtml)
-    .get(responseData[index].pathFile)
+    .get(data.uri).reply(200, resHtml) // https://ru.hexlet.io
+    .get(responseData[index].pathFile) // "/assets/professions/nodejs.png"
     .reply(200, expected);
-  await pageLoader(`${data.baseUrl}${data.uri}`, mainFolder);
-  const loaderPath = await fs.readdir(path.join(rootPath, actualFiles));
-  const actualSourcesDir = loaderPath.find((file) => file.match(`${format}$`));
-  const actualSourcesDirPath = path.join(rootPath, 'ru-hexlet-io-courses_files');
-  const actualValue = await readCurrentFile(actualSourcesDirPath, actualSourcesDir);
+  await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder); // ru-hexlet-io-assets-professions-nodejs.png
+  const file = path.join(tmpFolder, actualFiles);
+  await fs.readdir(path.join(tmpFolder, actualFiles));
+  console.log(file);
+  // const actualSourcesDir = loaderPath.find((file) => file.match(/$png$/));
+  const actualValue = await readCurrentFile(file, expectedFileName);
   expect(actualValue.toString()).toEqual(expected);
 });
