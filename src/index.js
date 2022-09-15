@@ -5,23 +5,18 @@ import { URL } from 'url';
 import debug from 'debug';
 import cheerio from 'cheerio';
 import axios from 'axios';
-// import _ from 'lodash';
-import { prepareName, urlToFilename } from './helper.js';
+import { prepareName, processName } from './helper.js';
 
 const log = debug('page-loader');
-
-const getData = async (url) => {
-  const res = axios.get(url);
-  return res;
-};
-
-/* const dataFake = '<html lang="ru"> <head>
-<meta charset="utf-8"> <title>Курсы по программированию Хекслет</title>
-</head> <body> <img src="/assets/professions/nodejs.png"
- alt="Иконка профессии Node.js-программист" />
- <h3> <a href="/professions/nodejs">Node.js-программист</a> </h3> </body> </html>'; */
-
 const attributeMapping = [
+  {
+    tag: 'link',
+    attr: 'href',
+  },
+  {
+    tag: 'script',
+    attr: 'src',
+  },
   {
     tag: 'img',
     attr: 'src',
@@ -29,9 +24,9 @@ const attributeMapping = [
 ];
 
 const downloadData = (dirname, files, { url, slug }) => {
-  const myUrl = `${url.origin}${url.pathname}`;
   const fullPath = path.join(dirname, files, slug);
-  axios.get(myUrl, { responseType: 'arraybuffer' })
+  const myUrl = url.toString();
+  axios.get(myUrl, { responseType: 'stream' })
     .then((response) => fs.writeFile(fullPath, response.data))
     .catch((err) => {
       throw new Error(`Failed to save ${fullPath}. error: ${err.message}`);
@@ -39,7 +34,7 @@ const downloadData = (dirname, files, { url, slug }) => {
 };
 
 const prepareData = (website, folder, html) => {
-  const data = [];
+  const rez = [];
   const $ = cheerio.load(html, { decodeEntities: false });
   // пербор элеметов из запроса с фильтарицей
   attributeMapping.forEach((item) => {
@@ -50,40 +45,42 @@ const prepareData = (website, folder, html) => {
       .map((args) => ({
         args,
         url: new URL(args.attr(item.attr), website),
-      }));
+      }))
+      .filter(({ url }) => url.origin === website.origin);
     // Заменяем html
     items.forEach(({ args, url }) => {
-      const slug = urlToFilename(`${url.hostname}${url.pathname}`); // "ru-hexlet-io-courses_files\\ru-hexlet-io-assets-professions-nodejs.png"
+      const slug = processName(`${url.hostname}${url.pathname}`);
       args.attr(item.attr, path.join(folder, slug));
-      data.push({ url, slug });
+      rez.push({ url, slug });
     });
   });
-  return { html: $.html(), data };
+  return { html: $.html(), items: rez };
 };
 
 const pageLoader = async (pathUrl, pathFolder = '') => {
   const url = new URL(pathUrl);
   const folder = prepareName(`${url.hostname}${url.pathname}`, 'files');
-  const mainFile = urlToFilename(`${url.hostname}${url.pathname}`);
+  const mainFile = processName(`${url.hostname}${url.pathname}`);
   const dirname = path.resolve(process.cwd(), pathFolder); // tmp
   const fullDirname = path.join(dirname, folder);
   let data;
+  let tasks;
+  log(fullDirname);
 
-  await fs.access(fullDirname)
-    .then(() => log('foleds were created'))
-    .catch(() => {
-      log(`It is process creating folder ${fullDirname}`);
-      fs.mkdir(fullDirname, { recursive: true });
-    });
+  const isCreatedFiles = await fs.access(fullDirname)
+    .catch(() => fs.mkdir(fullDirname, { recursive: true }));
+  log(isCreatedFiles);
 
-  await getData(url.toString())
+  const promise = axios.get(url.toString())
     .then((response) => {
       data = prepareData(url, folder, response.data);
-      fs.writeFile(path.join(dirname, folder, mainFile), data.html);
     })
+    .then(() => fs.writeFile(path.join(dirname, mainFile), data.html))
     .then(() => {
-      const tasks = data.data.map((filesList) => downloadData(dirname, folder, filesList));
+      tasks = data.items.map((filesList) => downloadData(dirname, folder, filesList));
       return Promise.all(tasks);
-    });
+    })
+    .then(() => ({ filepath: path.join(dirname, folder) }));
+  return promise;
 };
 export default pageLoader;

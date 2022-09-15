@@ -21,10 +21,10 @@ export const prepareName = (url, key = '') => {
   return rez;
 };
 
-export const urlToFilename = (link, defaultFormat = '.html') => {
+export const processName = (link, defaultFormat = '.html') => {
   const { dir, name, ext } = path.parse(link);
   const slug = prepareName(path.join(dir, name));
   const format = ext || defaultFormat;
   return `${slug}${format}`;
 };
-export default urlToFilename;
+export default processName;

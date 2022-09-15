@@ -3,70 +3,91 @@ import nock from 'nock';
 import os from 'os';
 import path from 'path';
 import fs from 'fs/promises';
-import { beforeAll } from '@jest/globals';
 import pageLoader from '../src/index.js';
 
 let data = '';
-let dirPath = '';
-// const mainFolder = './page_loader';
-// const actualHtml = 'ru-hexlet-io-courses.html';
+let tmpFolder = '';
+let expectedData = '';
+let htmlFile = '';
+
+const actualHtml = 'ru-hexlet-io-courses.html';
 const actualFiles = 'ru-hexlet-io-courses_files';
-// const expectFile = 'courses.html';
-const fakeFile = 'fake_file.html';
+const expectFile = 'after.html';
+const fakeFile = 'before.html';
+const scope = nock('https://ru.hexlet.io').persist();
 
 const getFixturePath = (name) => path.join(__dirname, '..', '__fixtures__', name);
 const getFixtureContent = (name) => fs.readFile(getFixturePath(name), 'utf-8');
-const readCurrentFile = async (pathName, name) => {
-  const file = fs.readFile(path.join(pathName, name), 'utf-8');
-  return file;
-};
+const readCurrentFile = (pathName, name) => fs.readFile(path.join(pathName, name), 'utf-8');
 
 const responseData = [
   {
-    format: 'png',
     nameFile: 'nodejs.png',
     pathFile: '/assets/professions/nodejs.png',
     expectedFileName: 'ru-hexlet-io-assets-professions-nodejs.png',
   },
+  {
+    nameFile: 'style.css',
+    pathFile: '/assets/application.css',
+    expectedFileName: 'ru-hexlet-io-assets-application.css',
+  },
+  {
+    nameFile: 'main.js',
+    pathFile: '/packs/js/runtime.js',
+    expectedFileName: 'ru-hexlet-io-packs-js-runtime.js',
+  },
+  {
+    nameFile: 'before.html',
+    pathFile: '/courses',
+    expectedFileName: 'ru-hexlet-io-courses.html',
+  },
 ];
 
 beforeAll(async () => {
-  dirPath = await fs.mkdtemp(os.tmpdir());
-  console.log(dirPath);
+  nock.disableNetConnect();
+  htmlFile = await getFixtureContent(fakeFile);
+  expectedData = await getFixtureContent(expectFile);
+});
+
+afterAll(() => {
+  nock.enableNetConnect();
 });
 
 beforeEach(async () => {
+  tmpFolder = await fs.mkdtemp(os.tmpdir());
+  console.log(tmpFolder);
   data = {
     baseUrl: 'https://ru.hexlet.io',
     uri: '/courses',
   };
+  responseData.forEach(async (items) => scope
+    .get(items.pathFile)
+    .reply(200, await getFixtureContent(items.nameFile)));
 });
 
-// test('page loader', async () => {
-//   const resHtml = await getFixtureContent(fakeFile);
-//   nock(data.baseUrl).persist().get(data.uri).reply(200, resHtml);
-//   await pageLoader(`${data.baseUrl}${data.uri}`, dirPath);
-//   const loaderPath = path.join(dirPath, actualFiles);
-//   const expected = await getFixtureContent(expectFile);
-//   const actual = await readCurrentFile(loaderPath, actualHtml);
-//   expect(actual).toEqual(expected);
-// });
+afterEach(() => {
+  nock.cleanAll();
+});
 
-test.each(responseData)('img test', async ({ nameFile, expectedFileName }) => {
-  const index = responseData.findIndex((item) => item.nameFile === nameFile);
-  const resHtml = await getFixtureContent(fakeFile);
-  const expected = await getFixtureContent(nameFile);
-  const tmpFolder = dirPath;
-  console.log(tmpFolder);
-  nock(data.baseUrl).persist()
-    .get(data.uri).reply(200, resHtml) // https://ru.hexlet.io
-    .get(responseData[index].pathFile) // "/assets/professions/nodejs.png"
-    .reply(200, expected);
-  await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder); // ru-hexlet-io-assets-professions-nodejs.png
-  const file = path.join(tmpFolder, actualFiles);
-  await fs.readdir(path.join(tmpFolder, actualFiles));
-  console.log(file);
-  // const actualSourcesDir = loaderPath.find((file) => file.match(/$png$/));
-  const actualValue = await readCurrentFile(file, expectedFileName);
-  expect(actualValue.toString()).toEqual(expected);
+describe('positive tests for pageloader —', () => {
+  test('html replacement', async () => {
+    scope
+      .get(data.uri)
+      .reply(200, htmlFile);
+    await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder);
+    const filesFolder = await fs.access(path.join(tmpFolder, actualFiles));
+    const actual = await readCurrentFile(tmpFolder, actualHtml);
+    expect(filesFolder).toBeUndefined();
+    expect(actual).toEqual(expectedData);
+  });
+
+  test.each(responseData)('check dependences files %s', async (item) => {
+    scope
+      .get(data.uri)
+      .reply(200, htmlFile);
+    const { filepath } = await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder);
+    const expected = await getFixtureContent(item.nameFile);
+    const actualValue = await readCurrentFile(filepath, item.expectedFileName);
+    expect(actualValue).toEqual(expected);
+  });
 });
