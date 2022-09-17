@@ -29,7 +29,7 @@ const attributeMapping = [
 const downloadData = (dirname, files, { url, slug }) => {
   const fullPath = path.join(dirname, files, slug);
   const myUrl = url.toString();
-  axios.get(myUrl, { responseType: 'stream' })
+  axios.get(myUrl, { responseType: 'arraybuffer' })
     .then((response) => fs.writeFile(fullPath, response.data))
     .catch((err) => {
       throw new Error(`Failed to save ${fullPath}. error: ${err.message}`);
