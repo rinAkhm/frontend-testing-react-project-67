@@ -13,6 +13,8 @@ npm install
 ```
 # demo
 Пример использования можно посмотреть в [видео](https://youtu.be/XNlxtHAFeHs)
+[![DEMO](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://youtu.be/XNlxtHAFeHs)
+
 
 # Start the script
 For start the pageLoader wirite command below

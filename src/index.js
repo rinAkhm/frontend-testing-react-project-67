@@ -7,6 +7,8 @@ import cheerio from 'cheerio';
 import axios from 'axios';
 import { prepareName, processName } from './helper.js';
 
+const date = () => new Date().toISOString();
+
 const log = debug('page-loader');
 const attributeMapping = [
   {
@@ -58,29 +60,40 @@ const prepareData = (website, folder, html) => {
 };
 
 const pageLoader = async (pathUrl, pathFolder = '') => {
+  log(`[${date()}] Inputed url ${pathUrl}`);
+  log(`[${date()}] Inputed pathFolder ${pathFolder}`);
   const url = new URL(pathUrl);
   const folder = prepareName(`${url.hostname}${url.pathname}`, 'files');
   const mainFile = processName(`${url.hostname}${url.pathname}`);
-  const dirname = path.resolve(process.cwd(), pathFolder); // tmp
+  const dirname = path.resolve(process.cwd(), pathFolder);
   const fullDirname = path.join(dirname, folder);
   let data;
   let tasks;
-  log(fullDirname);
 
-  const isCreatedFiles = await fs.access(fullDirname)
-    .catch(() => fs.mkdir(fullDirname, { recursive: true }));
-  log(isCreatedFiles);
+  await fs.access(fullDirname)
+    .catch(() => {
+      fs.mkdir(fullDirname, { recursive: true });
+      log(`[${date()}] Created Folder ${fullDirname}`);
+    });
 
   const promise = axios.get(url.toString())
     .then((response) => {
       data = prepareData(url, folder, response.data);
     })
-    .then(() => fs.writeFile(path.join(dirname, mainFile), data.html))
     .then(() => {
-      tasks = data.items.map((filesList) => downloadData(dirname, folder, filesList));
+      log(`[${date()}] It was created the mainHtml`);
+      return fs.writeFile(path.join(dirname, mainFile), data.html);
+    })
+    .then(() => {
+      tasks = data.items.map((filesList) => {
+        log(`[${date()}] url ${filesList.url}`);
+        log(`[${date()}] fileName ${filesList.slug}`);
+        return downloadData(dirname, folder, filesList);
+      });
       return Promise.all(tasks);
     })
     .then(() => ({ filepath: path.join(dirname, folder) }));
+  log(`[${date()}] Successfully completed script ${pathUrl}`);
   return promise;
 };
 export default pageLoader;

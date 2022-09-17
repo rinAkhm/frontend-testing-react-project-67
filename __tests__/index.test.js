@@ -55,7 +55,6 @@ afterAll(() => {
 
 beforeEach(async () => {
   tmpFolder = await fs.mkdtemp(os.tmpdir());
-  console.log(tmpFolder);
   data = {
     baseUrl: 'https://ru.hexlet.io',
     uri: '/courses',
@@ -89,5 +88,15 @@ describe('positive tests for pageloader —', () => {
     const expected = await getFixtureContent(item.nameFile);
     const actualValue = await readCurrentFile(filepath, item.expectedFileName);
     expect(actualValue).toEqual(expected);
+  });
+});
+
+describe('negative tests', () => {
+  test.each([500, 404])('server drop with code %s', async (code) => {
+    const url = `${data.baseUrl}${data.uri}`;
+    scope
+      .get(data.uri)
+      .reply(code, htmlFile);
+    await expect(pageLoader(url, tmpFolder)).rejects.toThrow(new RegExp(code));
   });
 });
