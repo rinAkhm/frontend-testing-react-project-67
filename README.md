@@ -12,8 +12,8 @@ open the project and install dependences
 npm install
 ```
 # demo
-Пример использования можно посмотреть в [видео](https://youtu.be/XNlxtHAFeHs)
-[![DEMO](https://img.youtube.com/vi/YOUTUBE_VIDEO_ID_HERE/0.jpg)](https://youtu.be/XNlxtHAFeHs)
+This demo video how work the script.
+[![DEMO](./images/video.png)](https://youtu.be/XNlxtHAFeHs)
 
 
 # Start the script
@@ -27,3 +27,9 @@ For start test should write command below
 ```
 npx jest
 ```
+
+# DEBUG mode 'page-loader'
+[![DEMO](./images/video.png)](https://youtu.be/6uhacnjc-JA)
+
+# DEBUG mode 'axios'
+[![DEMO](./images/video.png)](https://youtu.be/hY30jqQDh18)

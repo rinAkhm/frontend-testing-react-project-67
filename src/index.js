@@ -1,5 +1,6 @@
 /* linebreak-style: ["error", "windows"] */
 import path from 'path';
+import 'axios-debug-log';
 import { promises as fs } from 'fs';
 import { URL } from 'url';
 import debug from 'debug';

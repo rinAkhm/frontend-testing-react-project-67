@@ -92,11 +92,22 @@ describe('positive tests for pageloader —', () => {
 });
 
 describe('negative tests', () => {
-  test.each([500, 404])('server drop with code %s', async (code) => {
+  test.each([404, 503])('server drop with code %d', async (code) => {
     const url = `${data.baseUrl}${data.uri}`;
     scope
       .get(data.uri)
       .reply(code, htmlFile);
     await expect(pageLoader(url, tmpFolder)).rejects.toThrow(new RegExp(code));
+  });
+
+  test.each(responseData)('should throw when can\'t download %s', async (items) => {
+    scope
+      .get(data.uri)
+      .reply(200, htmlFile)
+      .get(items.pathFile)
+      .reply(200);
+    await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder);
+    await expect(fs.readFile(path.join(tmpFolder, actualFiles, items.expectedFileName), 'utf-8'))
+      .rejects.toThrow('ENOENT');
   });
 });
