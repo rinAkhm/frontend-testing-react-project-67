@@ -81,12 +81,13 @@ describe('positive tests for pageloader —', () => {
   });
 
   test.each(responseData)('check dependences files %s', async (item) => {
+    const filesFolder = path.join(tmpFolder, actualFiles);
     scope
       .get(data.uri)
       .reply(200, htmlFile);
-    const { filepath } = await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder);
+    await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder);
     const expected = await getFixtureContent(item.nameFile);
-    const actualValue = await readCurrentFile(filepath, item.expectedFileName);
+    const actualValue = await readCurrentFile(filesFolder, item.expectedFileName);
     expect(actualValue).toEqual(expected);
   });
 });

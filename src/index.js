@@ -93,8 +93,8 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
       });
       return Promise.all(tasks);
     })
-    .then(() => ({ filepath: path.join(dirname, folder) }));
-  log(`[${date()}] Successfully completed script ${pathUrl}`);
+    .then(() => ({ filepath: path.join(dirname, mainFile) }));
+  log(`[${date()}] Successfully completed script ${mainFile}`);
   return promise;
 };
 export default pageLoader;
