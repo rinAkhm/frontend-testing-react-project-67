@@ -93,7 +93,7 @@ describe('positive tests for pageloader —', () => {
 });
 
 describe('negative tests', () => {
-  test.each([404, 503])('server drop with code %d', async (code) => {
+  test.each([404, 500])('server drop with code %s', async (code) => {
     const url = `${data.baseUrl}${data.uri}`;
     scope
       .get(data.uri)
