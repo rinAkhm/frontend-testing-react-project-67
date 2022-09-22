@@ -31,8 +31,9 @@ const downloadData = (dirname, files, { url, slug }) => {
   const myUrl = url.toString();
   axios.get(myUrl, { responseType: 'arraybuffer' })
     .then((response) => fs.writeFile(fullPath, response.data))
+    .then('created')
     .catch((err) => {
-      throw new Error(`Failed to save ${fullPath}. error: ${err.message}`);
+      console.error(`Failed to save ${fullPath}. error: ${err.message}`);
     });
 };
 
@@ -69,30 +70,26 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
   const dirname = path.resolve(process.cwd(), pathFolder);
   const fullDirname = path.join(dirname, folder);
   let data;
-  let tasks;
-
-  await fs.access(fullDirname)
-    .catch(() => {
-      fs.mkdir(fullDirname, { recursive: true });
-      log(`[${date()}] Created Folder ${fullDirname}`);
-    });
 
   const promise = axios.get(url.toString())
     .then((response) => {
       data = prepareData(url, folder, response.data);
+      return fs.access(fullDirname)
+        .catch(() => {
+          fs.mkdir(fullDirname, { recursive: true });
+          log(`[${date()}] Created Folder ${fullDirname}`);
+        });
     })
+    .then(() => {
+      const tasks = data.items.map((filesList) => downloadData(dirname, folder, filesList));
+      return Promise.all(tasks);
+    })
+
     .then(() => {
       log(`[${date()}] It was created the mainHtml`);
       return fs.writeFile(path.join(dirname, mainFile), data.html);
     })
-    .then(() => {
-      tasks = data.items.map((filesList) => {
-        log(`[${date()}] url ${filesList.url}`);
-        log(`[${date()}] fileName ${filesList.slug}`);
-        return downloadData(dirname, folder, filesList);
-      });
-      return Promise.all(tasks);
-    })
+
     .then(() => ({ filepath: path.join(dirname, mainFile) }));
   log(`[${date()}] Successfully completed script ${mainFile}`);
   return promise;
