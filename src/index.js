@@ -82,10 +82,6 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
       data = prepareData(url, folder, response.data);
     })
     .then(() => {
-      log(`[${date()}] It was created the mainHtml`);
-      return fs.writeFile(path.join(dirname, mainFile), data.html);
-    })
-    .then(() => {
       tasks = data.items.map((filesList) => {
         log(`[${date()}] url ${filesList.url}`);
         log(`[${date()}] fileName ${filesList.slug}`);
@@ -93,6 +89,12 @@ const pageLoader = async (pathUrl, pathFolder = '') => {
       });
       return Promise.all(tasks);
     })
+  
+    .then(() => {
+      log(`[${date()}] It was created the mainHtml`);
+      return fs.writeFile(path.join(dirname, mainFile), data.html);
+    })
+    
     .then(() => ({ filepath: path.join(dirname, mainFile) }));
   log(`[${date()}] Successfully completed script ${mainFile}`);
   return promise;
