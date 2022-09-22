@@ -32,8 +32,9 @@ const downloadData = (dirname, files, { url, slug }) => {
   axios.get(myUrl, { responseType: 'arraybuffer' })
     .then((response) => fs.writeFile(fullPath, response.data))
     .then('created')
-    .catch((err) => {
-      console.error(`Failed to save ${fullPath}. error: ${err.message}`);
+    .catch(() => {
+      throw new Error(/ENOENT/);
+      // console.error(`Failed to save ${fullPath}. error: ${err.message}`);
     });
 };
 
