@@ -11,37 +11,50 @@ import { prepareName, processName } from './helper.js';
 const log = debug('page-loader');
 const date = () => new Date().toISOString();
 
-const attributeMapping = {
-  link: 'href',
-  script: 'src',
-  img: 'src',
-};
+const attributeMapping = [
+  {
+    tag: 'link',
+    attr: 'href',
+  },
+  {
+    tag: 'script',
+    attr: 'src',
+  },
+  {
+    tag: 'img',
+    attr: 'src',
+  },
+];
 
-const prepareAssets = (website, baseDirname, html) => {
+const prepareData = (website, folder, html) => {
+  const rez = [];
   const $ = cheerio.load(html, { decodeEntities: false });
-  const assets = [];
-  Object.entries(attributeMapping).forEach(([tagName, attrName]) => {
-    const $elements = $(tagName).toArray();
-    const elementsWithUrls = $elements.map((element) => $(element))
-      .filter(($element) => $element.attr(attrName))
-      .map(($element) => ({ $element, url: new URL($element.attr(attrName), website) }))
-      .filter(({ url }) => url.origin === website);
-
-    elementsWithUrls.forEach(({ $element, url }) => {
+  // пербор элеметов из запроса с фильтарицей
+  attributeMapping.forEach((item) => {
+    const listElements = $(item.tag).toArray();
+    const items = listElements
+      .map((element) => $(element))
+      .filter((element) => element.attr(item.attr))
+      .map((args) => ({
+        args,
+        url: new URL(args.attr(item.attr), website),
+      }))
+      .filter(({ url }) => url.origin === website.origin);
+    // Заменяем html
+    items.forEach(({ args, url }) => {
       const slug = processName(`${url.hostname}${url.pathname}`);
-      const filepath = path.join(baseDirname, slug);
-      assets.push({ url, filename: slug });
-      $element.attr(attrName, filepath);
+      args.attr(item.attr, path.join(folder, slug));
+      rez.push({ url, slug });
     });
   });
 
-  return { html: $.html(), assets };
+  return { html: $.html(), items: rez };
 };
 
-const downloadAsset = (dirname, { url, filename }) => (
+const downloadData = (dirname, { url, slug }) => (
   axios.get(url.toString(), { responseType: 'arraybuffer' })
     .then((response) => {
-      const fullPath = path.join(dirname, filename);
+      const fullPath = path.join(dirname, slug);
       return fs.writeFile(fullPath, response.data);
     })
 );
@@ -60,7 +73,7 @@ const pageLoader = (pageUrl, outputDirname = '') => {
   let data;
   const promise = axios.get(pageUrl)
     .then((response) => {
-      data = prepareAssets(url.origin, folder, response.data);
+      data = prepareData(url, folder, response.data);
       log('create (if not exists) directory for assets', fullDirname);
       return fs.access(fullDirname)
         .catch(() => {
@@ -73,10 +86,8 @@ const pageLoader = (pageUrl, outputDirname = '') => {
       return fs.writeFile(fullOutputFilename, data.html);
     })
     .then(() => {
-      const tasks = data.assets.map((asset) => {
-        log('asset', asset.url.toString(), asset.filename);
-        return downloadAsset(fullDirname, asset).catch(_.noop);
-      });
+      const tasks = data.items.map((filesList) => downloadData(fullDirname, filesList)
+        .catch(_.noop()));
       return Promise.all(tasks);
     })
     .then(() => ({ filepath: fullOutputFilename }));
