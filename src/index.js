@@ -59,7 +59,7 @@ const downloadData = (dirname, { url, slug }) => (
     })
 );
 
-const pageLoader = (pageUrl, outputDirname = '') => {
+const pageLoader = async (pageUrl, outputDirname = '') => {
   log(`[${date()}] Inputed url ${pageUrl}`);
   log(`[${date()}] Inputed pathFolder ${outputDirname}`);
   const url = new URL(pageUrl);
