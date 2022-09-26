@@ -80,6 +80,17 @@ describe('positive tests for pageloader —', () => {
     expect(actual).toEqual(expectedData);
   });
 
+  test('without name folder', async () => {
+    scope
+      .get(data.uri)
+      .reply(200, htmlFile);
+    await pageLoader(`${data.baseUrl}${data.uri}`);
+    console.log(path.join(process.cwd(), actualFiles, 'ru-hexlet-io-assets-professions-nodejs.png'));
+    const actual = await readCurrentFile(path.join(process.cwd(), actualFiles), 'ru-hexlet-io-assets-professions-nodejs.png');
+    const expected = await getFixtureContent('nodejs.png');
+    expect(actual).toEqual(expected);
+  });
+
   test.each(responseData)('check dependences files %s', async (item) => {
     const filesFolder = path.join(tmpFolder, actualFiles);
     scope
@@ -104,11 +115,10 @@ describe('negative tests', () => {
   test.each(responseData)('should throw when can\'t download %s', async (items) => {
     scope
       .get(data.uri)
-      .reply(200, htmlFile)
+      .reply(200)
       .get(items.pathFile)
       .reply(200);
     await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder);
-    await expect(fs.readFile(path.join(tmpFolder, actualFiles, items.expectedFileName), 'utf-8'))
-      .rejects.toThrow('ENOENT');
+    await expect(fs.readFile(path.join(tmpFolder, actualFiles, items.expectedFileName), 'utf-8')).rejects.toThrow('ENOENT');
   });
 });

@@ -1,97 +1,85 @@
 /* linebreak-style: ["error", "windows"] */
-import path from 'path';
-import 'axios-debug-log';
 import { promises as fs } from 'fs';
-import { URL } from 'url';
-import debug from 'debug';
-import cheerio from 'cheerio';
 import axios from 'axios';
+import { URL } from 'url';
+import _ from 'lodash';
+import path from 'path';
+import cheerio from 'cheerio';
+import debug from 'debug';
 import { prepareName, processName } from './helper.js';
 
+const log = debug('page-loader');
 const date = () => new Date().toISOString();
 
-const log = debug('page-loader');
-const attributeMapping = [
-  {
-    tag: 'link',
-    attr: 'href',
-  },
-  {
-    tag: 'script',
-    attr: 'src',
-  },
-  {
-    tag: 'img',
-    attr: 'src',
-  },
-];
-
-const downloadData = (dirname, files, { url, slug }) => {
-  const fullPath = path.join(dirname, files, slug);
-  const myUrl = url.toString();
-  axios.get(myUrl, { responseType: 'arraybuffer' })
-    .then((response) => fs.writeFile(fullPath, response.data))
-    .then('created')
-    .catch(() => {
-      throw new Error(/ENOENT/);
-      // console.error(`Failed to save ${fullPath}. error: ${err.message}`);
-    });
+const attributeMapping = {
+  link: 'href',
+  script: 'src',
+  img: 'src',
 };
 
-const prepareData = (website, folder, html) => {
-  const rez = [];
+const prepareAssets = (website, baseDirname, html) => {
   const $ = cheerio.load(html, { decodeEntities: false });
-  // пербор элеметов из запроса с фильтарицей
-  attributeMapping.forEach((item) => {
-    const listElements = $(item.tag).toArray();
-    const items = listElements
-      .map((element) => $(element))
-      .filter((element) => element.attr(item.attr))
-      .map((args) => ({
-        args,
-        url: new URL(args.attr(item.attr), website),
-      }))
-      .filter(({ url }) => url.origin === website.origin);
-    // Заменяем html
-    items.forEach(({ args, url }) => {
+  const assets = [];
+  Object.entries(attributeMapping).forEach(([tagName, attrName]) => {
+    const $elements = $(tagName).toArray();
+    const elementsWithUrls = $elements.map((element) => $(element))
+      .filter(($element) => $element.attr(attrName))
+      .map(($element) => ({ $element, url: new URL($element.attr(attrName), website) }))
+      .filter(({ url }) => url.origin === website);
+
+    elementsWithUrls.forEach(({ $element, url }) => {
       const slug = processName(`${url.hostname}${url.pathname}`);
-      args.attr(item.attr, path.join(folder, slug));
-      rez.push({ url, slug });
+      const filepath = path.join(baseDirname, slug);
+      assets.push({ url, filename: slug });
+      $element.attr(attrName, filepath);
     });
   });
-  return { html: $.html(), items: rez };
+
+  return { html: $.html(), assets };
 };
 
-const pageLoader = async (pathUrl, pathFolder = '') => {
-  log(`[${date()}] Inputed url ${pathUrl}`);
-  log(`[${date()}] Inputed pathFolder ${pathFolder}`);
-  const url = new URL(pathUrl);
-  const folder = prepareName(`${url.hostname}${url.pathname}`, 'files');
-  const mainFile = processName(`${url.hostname}${url.pathname}`);
-  const dirname = path.resolve(process.cwd(), pathFolder);
-  const fullDirname = path.join(dirname, folder);
-  let data;
-
-  const promise = axios.get(url.toString())
+const downloadAsset = (dirname, { url, filename }) => (
+  axios.get(url.toString(), { responseType: 'arraybuffer' })
     .then((response) => {
-      data = prepareData(url, folder, response.data);
+      const fullPath = path.join(dirname, filename);
+      return fs.writeFile(fullPath, response.data);
+    })
+);
+
+const pageLoader = (pageUrl, outputDirname = '') => {
+  log(`[${date()}] Inputed url ${pageUrl}`);
+  log(`[${date()}] Inputed pathFolder ${outputDirname}`);
+  const url = new URL(pageUrl);
+  const slug = `${url.hostname}${url.pathname}`;
+  const mainFile = processName(slug);
+  const dirname = path.resolve(process.cwd(), outputDirname);
+  const fullOutputFilename = path.join(dirname, mainFile);
+  const folder = prepareName(slug, 'files');
+  const fullDirname = path.join(dirname, folder);
+
+  let data;
+  const promise = axios.get(pageUrl)
+    .then((response) => {
+      data = prepareAssets(url.origin, folder, response.data);
+      log('create (if not exists) directory for assets', fullDirname);
       return fs.access(fullDirname)
         .catch(() => {
-          fs.mkdir(fullDirname, { recursive: true });
+          fs.mkdir(fullDirname);
           log(`[${date()}] Created Folder ${fullDirname}`);
         });
     })
     .then(() => {
-      const tasks = data.items.map((filesList) => downloadData(dirname, folder, filesList));
+      log(`[${date()}] It was created the mainHtml`);
+      return fs.writeFile(fullOutputFilename, data.html);
+    })
+    .then(() => {
+      const tasks = data.assets.map((asset) => {
+        log('asset', asset.url.toString(), asset.filename);
+        return downloadAsset(fullDirname, asset).catch(_.noop);
+      });
       return Promise.all(tasks);
     })
-
-    .then(() => {
-      log(`[${date()}] It was created the mainHtml`);
-      return fs.writeFile(path.join(dirname, mainFile), data.html);
-    })
-
-    .then(() => ({ filepath: path.join(dirname, mainFile) }));
+    .then(() => ({ filepath: fullOutputFilename }));
   log(`[${date()}] Successfully completed script ${mainFile}`);
   return promise;
 };
