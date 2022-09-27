@@ -112,13 +112,14 @@ describe('negative tests', () => {
     await expect(pageLoader(url, tmpFolder)).rejects.toThrow(new RegExp(code));
   });
 
-  test.each(responseData)('should throw when can\'t download %s', async (items) => {
+  test('check with file system error', async () => {
+    const failDir = '/fail_Dir';
+    const file = getFixturePath('nodejs.png');
+    const url = `${data.baseUrl}${data.uri}`;
     scope
       .get(data.uri)
-      .reply(200)
-      .get(items.pathFile)
       .reply(200);
-    await pageLoader(`${data.baseUrl}${data.uri}`, tmpFolder);
-    await expect(fs.readFile(path.join(tmpFolder, actualFiles, items.expectedFileName), 'utf-8')).rejects.toThrow('ENOENT');
+    await expect(pageLoader(url, failDir)).rejects.toThrow('ENOENT');
+    await expect(pageLoader(url, file)).rejects.toThrow('ENOTDIR');
   });
 });

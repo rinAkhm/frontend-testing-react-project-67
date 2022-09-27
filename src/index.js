@@ -76,10 +76,7 @@ const pageLoader = async (pageUrl, outputDirname = '') => {
       data = prepareData(url, folder, response.data);
       log('create (if not exists) directory for assets', fullDirname);
       return fs.access(fullDirname)
-        .catch(() => {
-          fs.mkdir(fullDirname);
-          log(`[${date()}] Created Folder ${fullDirname}`);
-        });
+        .catch(() => fs.mkdir(fullDirname));
     })
     .then(() => {
       log(`[${date()}] It was created the mainHtml`);
