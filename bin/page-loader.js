@@ -15,5 +15,3 @@ program
     console.log(await pageLoader(url, options.output));
   })
   .parse(process.argv);
-
-if (!program.args.length) program.help();
