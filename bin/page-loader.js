@@ -14,7 +14,7 @@ program
   .action(async (url, options) => {
     const { filepath } = await pageLoader(url, options.output);
     console.log(`Page was successfully downloaded into ${filepath}`);
-  })
-  .parse(process.argv);
+  });
+program.parse(process.argv);
 
 if (!program.args.length) program.help();
