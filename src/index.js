@@ -77,7 +77,7 @@ const pageLoader = async (pageUrl, outputDirname = '') => {
       log('create (if not exists) directory for assets', fullDirname);
       return fs.access(fullDirname)
         .catch(() => {
-          fs.mkdir(fullDirname, { recursive: true });
+          fs.mkdir(fullDirname);
           log(`[${date()}] Created Folder ${fullDirname}`);
         });
     })
