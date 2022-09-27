@@ -11,8 +11,10 @@ program
   .description('Page download')
   .arguments('<url>', 'url source')
   .option('-o, --output [dirPath]', 'output directory', process.cwd())
-  .action(async (url, program) => {
-    const { filepath } = await pageLoader(url, program.output);
+  .action(async (url, options) => {
+    const { filepath } = await pageLoader(url, options.output);
     console.log(`Page was successfully downloaded into ${filepath}`);
-  });
-program.parse(process.argv);
+  })
+  .parse(process.argv);
+
+if (!program.args.length) program.help();
