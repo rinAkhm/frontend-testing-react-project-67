@@ -4,7 +4,7 @@
   "description": "page loader",
   "main": "src/index.js",
   "bin": {
-    "nodejs-package": "src/bin/page-loader.js"
+    "bin": "src/bin/page-loader.js"
   },
   "scripts": {
     "test": "npx jest",
